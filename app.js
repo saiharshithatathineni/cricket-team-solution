@@ -6,19 +6,21 @@ const app = express();
 app.use(express.json());
 const dbPath = path.join(__dirname, "cricketTeam.db");
 let db = null;
-const intialize = async () => {
+const intializeDBAndServer = async () => {
   try {
     db = await open({
       filename: dbPath,
       driver: sqlite3.Database,
     });
-    app.listen(3002, () => console.log("success"));
+    app.listen(3009, () => {
+      console.log("Server running at http://localhost:3009");
+    });
   } catch (e) {
     console.log(`Db error ${e.message}`);
     process.exit(1);
   }
 };
-intialize();
+intializeDBAndServer();
 const convertDbToResponseObject = (dbObject) => {
   return {
     playerId: dbObject.player_id,
@@ -28,19 +30,21 @@ const convertDbToResponseObject = (dbObject) => {
   };
 };
 app.get("/players/", async (request, response) => {
-  const a = `
+  const getCricketQuery = `
               SELECT 
               * 
               FROM 
               cricket_team;`;
-  const b = await db.all(a);
-  response.send(b.map((i) => convertDbToResponseObject(i)));
+  const cricketArray = await db.all(getCricketQuery);
+  response.send(
+    cricketArray.map((eachPlayer) => convertDbToResponseObject(eachPlayer))
+  );
 });
 
 app.post("/players/", async (request, response) => {
-  const details = request.body;
-  const { playerName, jerseyNumber, role } = details;
-  const api2 = `
+  const playerDetails = request.body;
+  const { playerName, jerseyNumber, role } = playerDetails;
+  const addplayerQuery2 = `
      INSERT INTO 
      cricket_team(player_name,jersey_number,role)
      VALUES
@@ -48,7 +52,7 @@ app.post("/players/", async (request, response) => {
          '${playerName}',
         ${jerseyNumber},
         '${role}');`;
-  const db3 = await db.run(api2);
+  const db3 = await db.run(addplayerQuery2);
   response.send("Player Added to Team");
 });
 
@@ -73,8 +77,8 @@ app.put("/players/:playerId/", async (request, response) => {
     UPDATE 
        cricket_team 
     SET 
-        player_name '${playerName}',
-        jersey_number '${jerseyNumber}',
+        player_name ='${playerName}',
+        jersey_number= ${jerseyNumber},
         role='${role}'
     WHERE 
         player_id=${playerId};`;
